@@ -18,11 +18,11 @@ String password_generator({int len = 4}) {
 
 
 void createCommittee(var name, var price, var requiredMembers) {
-  String committeeID = id_generator(); // You'll need to implement this
-  String password = password_generator();    // And this as well
-    // Schedule committee for current month (Example)
+  String committeeID = id_generator(); 
+  String password = password_generator(); 
+    
   DateTime now = DateTime.now();
-  DateTime scheduleDate = DateTime(now.year, now.month, 15); // Example date
+  DateTime scheduleDate = DateTime(now.year, now.month, 17);
   
   Committee[committeeID] = {
     'name': name,
