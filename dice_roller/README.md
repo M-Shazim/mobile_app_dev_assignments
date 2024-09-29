@@ -1,16 +1,9 @@
 # dice_roller
 
-A new Flutter project.
+## Watch the video by clicking on the thumbnail
 
-## Getting Started
+[![Watch the video](https://github.com/user-attachments/assets/3a6c00a9-68bb-46ba-8213-0f5daa5d635f)](https://www.loom.com/share/389a76fcca1846cf94a07173de25e5ad?sid=02cdc206-c54b-4904-9e89-21573d122fd4)
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
