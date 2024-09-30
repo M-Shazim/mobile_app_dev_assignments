@@ -1,16 +1,8 @@
 # dice_roller_with_players
 
-A new Flutter project.
+## Watch the video by clicking on the thumbnail
 
-## Getting Started
+[![Watch the video](https://github.com/user-attachments/assets/fd41e51d-7c5d-4c60-8f6f-ec1c650353bd)](https://www.loom.com/share/82ab0481fdfb49b283a3b86dd682143e?sid=cdf89a25-a03e-4df9-91aa-c193ad108f91)
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
