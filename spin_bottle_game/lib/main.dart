@@ -41,9 +41,11 @@ class _SpinTheBottleGameState extends State<SpinTheBottleGame>
   ];
 
   // Fixed angles for 10 names
-  final List<double> nameAngles = [
-    0, 36, 72, 108, 144, 180, 216, 252, 288, 324
-  ];
+  final List<double> nameAngles = [0, 36, 72, 108, 144, 180, 216, 252, 288, 324];
+
+  // List of bottle images
+  List<String> bottleImages = ['bottle1.png', 'bottle2.png', 'bottle3.png'];
+  String selectedBottle = 'bottle1.png'; // Default bottle
 
   @override
   void initState() {
@@ -82,7 +84,7 @@ class _SpinTheBottleGameState extends State<SpinTheBottleGame>
 
       // Round the selected angle to the nearest predefined angle
       int selectedPlayerIndex = nameAngles.indexWhere((angle) =>
-      (selectedAngle - angle).abs() < 5); // Allow a small margin of error
+          (selectedAngle - angle).abs() < 5); // Allow a small margin of error
 
       if (selectedPlayerIndex != -1 && selectedPlayerIndex < playerNames.length) {
         selectedPlayer = playerNames[selectedPlayerIndex];
@@ -166,35 +168,50 @@ class _SpinTheBottleGameState extends State<SpinTheBottleGame>
                   ..._buildCircularNames(), // Build names in a circle around the bottle
                   RotationTransition(
                     turns: _animation,
-                    child: Image.asset('images/bottle.png', width: 100),
+                    child: Image.asset('images/$selectedBottle', width: 100),
                   ),
                 ],
               ),
             ),
           SizedBox(height: 20),
+          DropdownButton<String>(
+            value: selectedBottle,
+            items: bottleImages.map((bottle) {
+              return DropdownMenuItem<String>(
+                value: bottle,
+                child: Text(bottle),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                selectedBottle = newValue!;
+              });
+            },
+          ),
+          SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isSpinning
                 ? null
                 : () {
-              setState(() {
-                _isSpinning = true;
-                selectedPlayer = null;
+                    setState(() {
+                      _isSpinning = true;
+                      selectedPlayer = null;
 
-                // Randomly choose one of the angles where the bottle will stop
-                int randomAngleIndex = Random().nextInt(playerNames.length);
-                double selectedAngle = nameAngles[randomAngleIndex];
+                      // Randomly choose one of the angles where the bottle will stop
+                      int randomAngleIndex = Random().nextInt(playerNames.length);
+                      double selectedAngle = nameAngles[randomAngleIndex];
 
-                // Set the animation to spin to the chosen angle
-                _animation = Tween<double>(begin: 0, end: selectedAngle * (pi / 180)).animate(
-                  CurvedAnimation(
-                    parent: _controller,
-                    curve: Curves.easeOut,
-                  ),
-                );
-                _controller.reset();
-                _controller.forward();
-              });
-            },
+                      // Set the animation to spin to the chosen angle
+                      _animation = Tween<double>(begin: 0, end: selectedAngle * (pi / 180)).animate(
+                        CurvedAnimation(
+                          parent: _controller,
+                          curve: Curves.easeOut,
+                        ),
+                      );
+                      _controller.reset();
+                      _controller.forward();
+                    });
+                  },
             child: Text('Spin the Bottle'),
           ),
         ],
