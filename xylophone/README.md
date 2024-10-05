@@ -1,16 +1,7 @@
 # xylophone
 
-A new Flutter project.
 
-## Getting Started
+## Watch the video by clicking on the thumbnail
 
-This project is a starting point for a Flutter application.
+[![Watch the video](https://github.com/user-attachments/assets/5cdcb8c9-47e1-437a-a723-545b6782a0b4)](https://www.loom.com/share/b1064ca75bac47459fadde351f89e9f1?sid=5d5744e3-4318-4d2b-a12e-1c3557fbefb8)
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
