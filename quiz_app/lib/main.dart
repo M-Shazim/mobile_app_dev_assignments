@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // Import this for Timer
-
+import 'dart:async';
 import 'quiz_brain.dart';
 
 QuizBrain quizBrain = QuizBrain();
@@ -11,6 +10,12 @@ class QuizApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        primarySwatch: Colors.teal,
+        fontFamily: 'Roboto',
+      ),
       home: QuizPage(),
     );
   }
@@ -26,26 +31,23 @@ class _QuizPageState extends State<QuizPage> {
   int score = 0;
   bool isQuizStarted = false;
   int timer = 10;
-  Timer? countdownTimer; // Add a Timer object to control the countdown
+  Timer? countdownTimer;
 
   void checkAnswer(bool userPickedAnswer) {
     bool correctAnswer = quizBrain.getAnswer();
     setState(() {
-      // Cancel the timer when an answer is checked
       countdownTimer?.cancel();
-
       if (correctAnswer == userPickedAnswer) {
-        scoreKeeper.add(Icon(Icons.check, color: Colors.green));
+        scoreKeeper.add(Icon(Icons.check, color: Colors.teal));
         score++;
       } else {
-        scoreKeeper.add(Icon(Icons.close, color: Colors.red));
+        scoreKeeper.add(Icon(Icons.close, color: Colors.redAccent));
       }
-
       if (quizBrain.isFinished()) {
         showResult();
       } else {
         quizBrain.nextQuestion();
-        resetTimer(); // Reset the timer for the next question
+        resetTimer();
       }
     });
   }
@@ -53,38 +55,45 @@ class _QuizPageState extends State<QuizPage> {
   void startQuiz() {
     setState(() {
       isQuizStarted = true;
-      resetTimer(); // Start the timer when the quiz starts
+      resetTimer();
     });
   }
 
   void resetTimer() {
     setState(() {
-      timer = 10; // Reset timer to 10 seconds
+      timer = 10;
     });
-    countdownTimer?.cancel(); // Cancel any existing timers
+    countdownTimer?.cancel();
     countdownTimer = Timer.periodic(Duration(seconds: 1), (Timer t) {
       setState(() {
         if (timer > 0) {
           timer--;
         } else {
           countdownTimer?.cancel();
-          checkAnswer(false); // Automatically call checkAnswer with false if time runs out
+          checkAnswer(false);
         }
       });
     });
   }
 
   void showResult() {
-    countdownTimer?.cancel(); // Stop the timer when the quiz ends
+    countdownTimer?.cancel();
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Quiz Completed!"),
-          content: Text("Your score is $score/10"),
+          backgroundColor: Colors.grey.shade200,
+          title: Text(
+            "Quiz Completed!",
+            style: TextStyle(color: Colors.teal.shade700, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            "Your score is $score/10",
+            style: TextStyle(color: Colors.black87),
+          ),
           actions: [
             TextButton(
-              child: Text("Restart"),
+              child: Text("Restart", style: TextStyle(color: Colors.teal)),
               onPressed: () {
                 setState(() {
                   quizBrain.reset();
@@ -105,58 +114,130 @@ class _QuizPageState extends State<QuizPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10.0),
-        child: isQuizStarted
-            ? Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              'Time Left: $timer seconds',
-              style: TextStyle(fontSize: 20.0),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  quizBrain.getQuestion(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 25.0),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.teal.shade100, Colors.teal.shade300],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.0),
+          child: isQuizStarted
+              ? Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // Progress Bar
+              Container(
+                height: 8.0,
+                child: LinearProgressIndicator(
+                  value: timer / 10, // Calculate progress based on remaining time
+                  backgroundColor: Colors.teal.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
                 ),
               ),
-            ),
-            Expanded(
-              child: Row(
+              SizedBox(height: 10.0),
+
+              Text(
+                'Time Left: $timer seconds',
+                style: TextStyle(fontSize: 20.0, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20.0),
+
+              // Question Section inside Card
+              Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Center(
+                    child: Text(
+                      quizBrain.getQuestion(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24.0,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20.0),
+
+              Row(
                 children: <Widget>[
                   Expanded(
-                    child: ElevatedButton(
-                      child: Text('True'),
-                      onPressed: () {
-                        checkAnswer(true);
-                      },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.all(16.0),
+                          backgroundColor: Colors.teal.shade600,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25.0),
+                          ),
+                        ),
+                        child: Text('True',
+                            style: TextStyle(
+                                fontSize: 20.0, color: Colors.white)),
+                        onPressed: () {
+                          checkAnswer(true);
+                        },
+                      ),
                     ),
                   ),
                   Expanded(
-                    child: ElevatedButton(
-                      child: Text('False'),
-                      onPressed: () {
-                        checkAnswer(false);
-                      },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.all(16.0),
+                          backgroundColor: Colors.redAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25.0),
+                          ),
+                        ),
+                        child: Text('False',
+                            style: TextStyle(
+                                fontSize: 20.0, color: Colors.white)),
+                        onPressed: () {
+                          checkAnswer(false);
+                        },
+                      ),
                     ),
                   ),
                 ],
               ),
+              SizedBox(height: 20.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: scoreKeeper,
+              ),
+            ],
+          )
+              : Center(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                    vertical: 16.0, horizontal: 48.0),
+                backgroundColor: Colors.teal.shade400,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),
+              ),
+              onPressed: startQuiz,
+              child: Text(
+                'Start Quiz',
+                style: TextStyle(fontSize: 24.0, color: Colors.white),
+              ),
             ),
-            Row(
-              children: scoreKeeper,
-            ),
-          ],
-        )
-            : Center(
-          child: ElevatedButton(
-            onPressed: startQuiz,
-            child: Text('Start Quiz'),
           ),
         ),
       ),
@@ -165,7 +246,7 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   void dispose() {
-    countdownTimer?.cancel(); // Make sure to cancel the timer when disposing the widget
+    countdownTimer?.cancel();
     super.dispose();
   }
 }
