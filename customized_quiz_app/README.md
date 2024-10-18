@@ -1,16 +1,6 @@
 # customized_quiz_app
 
-A new Flutter project.
+## Watch the video by clicking on the thumbnail
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+[![Watch the video](https://github.com/user-attachments/assets/d241a3fc-3c79-4d66-bb1e-510e2cb90bc9)
+)](https://www.loom.com/share/119c84a3ca6b4b5daefdc5489886f833?sid=cb2e67dc-2e8b-4466-a800-c266e8c8c9c1)
