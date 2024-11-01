@@ -43,6 +43,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 _loadTasks(); // Refresh tasks
               },
             ),
+            onTap: () {
+              // Navigate to TaskDetailScreen with the task object as argument
+              Navigator.pushNamed(
+                context,
+                '/taskDetail',
+                arguments: task, // Pass the Task object here
+              );
+            },
           );
         },
       ),
