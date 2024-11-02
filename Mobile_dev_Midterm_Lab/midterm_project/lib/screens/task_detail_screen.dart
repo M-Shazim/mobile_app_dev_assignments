@@ -72,6 +72,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(widget.task.isCompleted ? 'Task marked as complete!' : 'Task marked as incomplete!'),
     ));
+
+    // Pop and pass `true` to indicate an update has occurred
+    Navigator.pop(context, true);
   }
 
   void _editTask() {
@@ -81,9 +84,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   void _deleteTask() async {
     await _dbHelper.deleteTask(widget.task.id!);
-    Navigator.pop(context); // Return to the previous screen
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Task deleted successfully!'),
     ));
+
+    // Pop and pass `true` to indicate that the task was deleted
+    Navigator.pop(context, true);
   }
 }

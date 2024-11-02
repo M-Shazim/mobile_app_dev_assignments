@@ -111,12 +111,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 _loadTasks(); // Refresh tasks
               },
             ),
-            onTap: () {
-              Navigator.pushNamed(
+            onTap: () async {
+              // Await result from TaskDetailScreen
+              final result = await Navigator.pushNamed(
                 context,
                 '/taskDetail',
                 arguments: task,
               );
+              // Reload tasks if the result is true
+              if (result == true) {
+                _loadTasks();
+              }
             },
           );
         },
