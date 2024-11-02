@@ -73,13 +73,77 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       content: Text(widget.task.isCompleted ? 'Task marked as complete!' : 'Task marked as incomplete!'),
     ));
 
-    // Pop and pass `true` to indicate an update has occurred
-    Navigator.pop(context, true);
+    Navigator.pop(context, true); // Return `true` to indicate an update
   }
 
-  void _editTask() {
-    // Navigate to a task edit screen or display an edit dialog
-    // Example: Navigator.pushNamed(context, '/editTask', arguments: widget.task);
+  void _editTask() async {
+    final TextEditingController titleController = TextEditingController(text: widget.task.title);
+    final TextEditingController descriptionController = TextEditingController(text: widget.task.description);
+    DateTime? dueDate = widget.task.dueDate;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Task'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(labelText: 'Task Title'),
+                ),
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(labelText: 'Task Description'),
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    final selectedDate = await showDatePicker(
+                      context: context,
+                      initialDate: dueDate ?? DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
+                    );
+                    if (selectedDate != null) {
+                      setState(() {
+                        dueDate = selectedDate;
+                      });
+                    }
+                  },
+                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${dueDate!.toLocal()}'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Update the task details
+                widget.task.title = titleController.text;
+                widget.task.description = descriptionController.text;
+                widget.task.dueDate = dueDate!;
+
+                await _dbHelper.updateTask(widget.task);
+                setState(() {}); // Refresh the details in TaskDetailScreen
+
+                // Close the edit dialog and return to TaskDetailScreen
+                Navigator.of(context).pop();
+
+                // Pop TaskDetailScreen and pass `true` to HomeScreen to refresh
+                Navigator.pop(context, true);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _deleteTask() async {
@@ -88,7 +152,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       content: Text('Task deleted successfully!'),
     ));
 
-    // Pop and pass `true` to indicate that the task was deleted
-    Navigator.pop(context, true);
+    Navigator.pop(context, true); // Indicate task deletion
   }
 }
