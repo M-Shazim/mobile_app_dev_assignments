@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // For formatting date and time
 import '../database/database_helper.dart';
 import '../models/task_model.dart';
 
@@ -24,11 +25,11 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Show dialog to add a new task
   Future<void> _showAddTaskDialog() async {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
     DateTime? dueDate;
+    TimeOfDay? dueTime;
 
     return showDialog(
       context: context,
@@ -59,7 +60,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       dueDate = selectedDate;
                     });
                   },
-                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${dueDate!.toLocal()}'),
+                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${DateFormat.yMd().format(dueDate!)}'),
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    final selectedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    setState(() {
+                      dueTime = selectedTime;
+                    });
+                  },
+                  child: Text(dueTime == null ? 'Select Due Time' : 'Due Time: ${dueTime!.format(context)}'),
                 ),
               ],
             ),
@@ -71,12 +85,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () async {
-                // Save the new task
-                if (titleController.text.isNotEmpty && dueDate != null) {
+                if (titleController.text.isNotEmpty && dueDate != null && dueTime != null) {
+                  final formattedTime = dueTime!.format(context); // Save time in 24-hour format
                   Task newTask = Task(
                     title: titleController.text,
                     description: descriptionController.text,
                     dueDate: dueDate!,
+                    dueTime: formattedTime, // Ensure dueTime is set here
                     isCompleted: false,
                   );
                   await _dbHelper.addTask(newTask);
@@ -86,6 +101,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: Text('Add'),
             ),
+
+
           ],
         );
       },
@@ -102,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final task = _tasks[index];
           return ListTile(
             title: Text(task.title),
-            subtitle: Text(task.description),
+            subtitle: Text('${task.description}\nDue: ${DateFormat.yMd().format(task.dueDate)} at ${task.dueTime}'),
             trailing: Checkbox(
               value: task.isCompleted,
               onChanged: (value) async {
@@ -112,13 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             onTap: () async {
-              // Await result from TaskDetailScreen
               final result = await Navigator.pushNamed(
                 context,
                 '/taskDetail',
                 arguments: task,
               );
-              // Reload tasks if the result is true
               if (result == true) {
                 _loadTasks();
               }

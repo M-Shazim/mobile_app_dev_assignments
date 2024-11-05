@@ -31,7 +31,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             SizedBox(height: 10),
             Text(
-              'Due Date: ${widget.task.dueDate.toLocal()}',
+              'Due Date: ${widget.task.dueDate.toLocal().toString().split(' ')[0]}',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Due Time: ${widget.task.dueTime ?? "Not Set"}',  // Display the due time here
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             SizedBox(height: 10),
@@ -64,6 +69,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
+
   void _toggleComplete() async {
     setState(() {
       widget.task.isCompleted = !widget.task.isCompleted;
@@ -80,6 +86,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final TextEditingController titleController = TextEditingController(text: widget.task.title);
     final TextEditingController descriptionController = TextEditingController(text: widget.task.description);
     DateTime? dueDate = widget.task.dueDate;
+    TimeOfDay? dueTime;
+
+    if (widget.task.dueTime != null) {
+      // Parse `dueTime` from the task model if it’s already set
+      final timeParts = widget.task.dueTime!.split(':');
+      dueTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
+    }
 
     await showDialog(
       context: context,
@@ -112,7 +125,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       });
                     }
                   },
-                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${dueDate!.toLocal()}'),
+                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${dueDate!.toLocal().toString().split(' ')[0]}'),
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    final selectedTime = await showTimePicker(
+                      context: context,
+                      initialTime: dueTime ?? TimeOfDay.now(),
+                    );
+                    if (selectedTime != null) {
+                      setState(() {
+                        dueTime = selectedTime;
+                      });
+                    }
+                  },
+                  child: Text(dueTime == null ? 'Select Due Time' : 'Due Time: ${dueTime!.format(context)}'),
                 ),
               ],
             ),
@@ -124,19 +152,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             TextButton(
               onPressed: () async {
-                // Update the task details
+                // Update task details
                 widget.task.title = titleController.text;
                 widget.task.description = descriptionController.text;
                 widget.task.dueDate = dueDate!;
+                widget.task.dueTime = dueTime?.format(context); // Save formatted time
 
                 await _dbHelper.updateTask(widget.task);
-                setState(() {}); // Refresh the details in TaskDetailScreen
+                setState(() {}); // Refresh TaskDetailScreen
 
-                // Close the edit dialog and return to TaskDetailScreen
-                Navigator.of(context).pop();
-
-                // Pop TaskDetailScreen and pass `true` to HomeScreen to refresh
-                Navigator.pop(context, true);
+                Navigator.of(context).pop(); // Close edit dialog
+                Navigator.pop(context, true); // Signal update to HomeScreen
               },
               child: Text('Save'),
             ),
@@ -145,6 +171,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       },
     );
   }
+
 
   void _deleteTask() async {
     await _dbHelper.deleteTask(widget.task.id!);
