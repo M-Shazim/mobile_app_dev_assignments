@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
+import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 
 class TaskDetailScreen extends StatefulWidget {
@@ -88,10 +89,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     DateTime? dueDate = widget.task.dueDate;
     TimeOfDay? dueTime;
 
+    // Initialize `dueTime` safely
     if (widget.task.dueTime != null) {
-      // Parse `dueTime` from the task model if it’s already set
-      final timeParts = widget.task.dueTime!.split(':');
-      dueTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
+      try {
+        // Parse dueTime as "HH:mm" format without AM/PM
+        final timeParts = widget.task.dueTime!.split(':');
+        dueTime = TimeOfDay(
+            hour: int.parse(timeParts[0]),
+            minute: int.parse(timeParts[1])
+        );
+      } catch (e) {
+        print("Error parsing dueTime: $e");
+        dueTime = TimeOfDay.now(); // Fallback if parsing fails
+      }
+    } else {
+      dueTime = TimeOfDay.now(); // Default time if dueTime is not set
     }
 
     await showDialog(
@@ -125,7 +137,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       });
                     }
                   },
-                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${dueDate!.toLocal().toString().split(' ')[0]}'),
+                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${DateFormat.yMd().format(dueDate!)}'),
                 ),
                 SizedBox(height: 10),
                 ElevatedButton(
@@ -156,7 +168,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 widget.task.title = titleController.text;
                 widget.task.description = descriptionController.text;
                 widget.task.dueDate = dueDate!;
-                widget.task.dueTime = dueTime?.format(context); // Save formatted time
+                widget.task.dueTime = dueTime?.format(context); // Save in "HH:mm" format
 
                 await _dbHelper.updateTask(widget.task);
                 setState(() {}); // Refresh TaskDetailScreen
@@ -171,6 +183,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       },
     );
   }
+
+
 
 
   void _deleteTask() async {
