@@ -1,3 +1,5 @@
+import '../repeation/task_constants.dart';
+
 class Task {
   int? id;
   String title;
@@ -7,6 +9,7 @@ class Task {
   bool isCompleted;
   bool isRepeating;
   String? repeatInterval; // For tasks repeating weekly/daily
+
 
   Task({
     this.id,
