@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/task_model.dart';
 import 'package:intl/intl.dart';
+import '../models/task_model.dart';
 import '../database/database_helper.dart';
+import '../repeation/task_constants.dart'; // Import the task constants
+
 
 class TaskDetailScreen extends StatefulWidget {
   final Task task;
@@ -37,7 +39,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             SizedBox(height: 10),
             Text(
-              'Due Time: ${widget.task.dueTime ?? "Not Set"}',  // Display the due time here
+              'Due Time: ${widget.task.dueTime ?? "Not Set"}',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             SizedBox(height: 10),
@@ -70,7 +72,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
-
   void _toggleComplete() async {
     setState(() {
       widget.task.isCompleted = !widget.task.isCompleted;
@@ -88,15 +89,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final TextEditingController descriptionController = TextEditingController(text: widget.task.description);
     DateTime? dueDate = widget.task.dueDate;
     TimeOfDay? dueTime;
+    bool isRepeating = widget.task.isRepeating;
+    String? repeatInterval = widget.task.repeatInterval;
 
     // Initialize `dueTime` safely
     if (widget.task.dueTime != null) {
       try {
-        // Parse dueTime as "HH:mm" format without AM/PM
         final timeParts = widget.task.dueTime!.split(':');
         dueTime = TimeOfDay(
-            hour: int.parse(timeParts[0]),
-            minute: int.parse(timeParts[1])
+          hour: int.parse(timeParts[0]),
+          minute: int.parse(timeParts[1]),
         );
       } catch (e) {
         print("Error parsing dueTime: $e");
@@ -109,82 +111,128 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit Task'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(labelText: 'Task Title'),
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            return AlertDialog(
+              title: Text('Edit Task'),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(labelText: 'Task Title'),
+                    ),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: 'Task Description'),
+                    ),
+                    SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final selectedDate = await showDatePicker(
+                          context: context,
+                          initialDate: dueDate ?? DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime(2100),
+                        );
+                        if (selectedDate != null) {
+                          setDialogState(() {
+                            dueDate = selectedDate;
+                          });
+                        }
+                      },
+                      child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${DateFormat.yMd().format(dueDate!)}'),
+                    ),
+                    SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final selectedTime = await showTimePicker(
+                          context: context,
+                          initialTime: dueTime ?? TimeOfDay.now(),
+                        );
+                        if (selectedTime != null) {
+                          setDialogState(() {
+                            dueTime = selectedTime;
+                          });
+                        }
+                      },
+                      child: Text(dueTime == null ? 'Select Due Time' : 'Due Time: ${dueTime!.format(context)}'),
+                    ),
+                    SizedBox(height: 10),
+
+                    // Repeat Task Toggle
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Repeat Task', style: TextStyle(fontSize: 16)),
+                        Switch(
+                          value: isRepeating,
+                          onChanged: (bool value) {
+                            setDialogState(() {
+                              isRepeating = value;
+                              if (!isRepeating) {
+                                repeatInterval = null; // Clear interval if repeating is disabled
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+
+                    // Repeat Interval Dropdown
+                    if (isRepeating)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: DropdownButtonFormField<String>(
+                          value: repeatInterval,
+                          items: [
+                            DropdownMenuItem(value: TaskConstants.minutely, child: Text('Every Minute')),
+                            DropdownMenuItem(value: TaskConstants.daily, child: Text('Every Day')),
+                            DropdownMenuItem(value: TaskConstants.weekly, child: Text('Every Week')),
+                            DropdownMenuItem(value: TaskConstants.monthly, child: Text('Every Month')),
+                            DropdownMenuItem(value: TaskConstants.yearly, child: Text('Every Year')),
+                          ],
+                          onChanged: (String? newValue) {
+                            setDialogState(() {
+                              repeatInterval = newValue;
+                            });
+                          },
+                          decoration: InputDecoration(labelText: 'Repeat Interval'),
+                        ),
+                      ),
+                  ],
                 ),
-                TextField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(labelText: 'Task Description'),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
                 ),
-                SizedBox(height: 10),
-                ElevatedButton(
+                TextButton(
                   onPressed: () async {
-                    final selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: dueDate ?? DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2100),
-                    );
-                    if (selectedDate != null) {
-                      setState(() {
-                        dueDate = selectedDate;
-                      });
-                    }
+                    // Update task details
+                    widget.task.title = titleController.text;
+                    widget.task.description = descriptionController.text;
+                    widget.task.dueDate = dueDate!;
+                    widget.task.dueTime = dueTime?.format(context); // Save in "HH:mm" format
+                    widget.task.isRepeating = isRepeating;
+                    widget.task.repeatInterval = repeatInterval;
+
+                    await _dbHelper.updateTask(widget.task);
+                    setState(() {}); // Refresh TaskDetailScreen
+
+                    Navigator.of(context).pop(); // Close edit dialog
+                    Navigator.pop(context, true); // Signal update to HomeScreen
                   },
-                  child: Text(dueDate == null ? 'Select Due Date' : 'Due Date: ${DateFormat.yMd().format(dueDate!)}'),
-                ),
-                SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () async {
-                    final selectedTime = await showTimePicker(
-                      context: context,
-                      initialTime: dueTime ?? TimeOfDay.now(),
-                    );
-                    if (selectedTime != null) {
-                      setState(() {
-                        dueTime = selectedTime;
-                      });
-                    }
-                  },
-                  child: Text(dueTime == null ? 'Select Due Time' : 'Due Time: ${dueTime!.format(context)}'),
+                  child: Text('Save'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Update task details
-                widget.task.title = titleController.text;
-                widget.task.description = descriptionController.text;
-                widget.task.dueDate = dueDate!;
-                widget.task.dueTime = dueTime?.format(context); // Save in "HH:mm" format
-
-                await _dbHelper.updateTask(widget.task);
-                setState(() {}); // Refresh TaskDetailScreen
-
-                Navigator.of(context).pop(); // Close edit dialog
-                Navigator.pop(context, true); // Signal update to HomeScreen
-              },
-              child: Text('Save'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
-
-
 
 
   void _deleteTask() async {
