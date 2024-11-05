@@ -21,35 +21,47 @@ class DatabaseHelper {
     final path = join(dbPath, 'tasks.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,  // Increment the database version
       onCreate: (db, version) {
         return db.execute('''
-          CREATE TABLE tasks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            dueDate TEXT,
-            isCompleted INTEGER,
-            isRepeating INTEGER,
-            repeatInterval TEXT
-          )
-        ''');
+        CREATE TABLE tasks(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT,
+          description TEXT,
+          dueDate TEXT,
+          dueTime TEXT,  -- New column for due time
+          isCompleted INTEGER,
+          isRepeating INTEGER,
+          repeatInterval TEXT
+        )
+      ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Add dueTime column if upgrading from version 1 to 2
+          await db.execute('ALTER TABLE tasks ADD COLUMN dueTime TEXT');
+        }
       },
     );
   }
 
+
+
   // CRUD methods (Add, Update, Delete, Fetch)
+// Add a new task
   Future<int> addTask(Task task) async {
     final db = await database;
     return await db.insert('tasks', task.toMap());
   }
 
+// Fetch all tasks
   Future<List<Task>> fetchTasks() async {
     final db = await database;
     final tasks = await db.query('tasks');
     return tasks.map((map) => Task.fromMap(map)).toList();
   }
 
+// Update an existing task
   Future<int> updateTask(Task task) async {
     final db = await database;
     return await db.update(
@@ -59,6 +71,7 @@ class DatabaseHelper {
       whereArgs: [task.id],
     );
   }
+
 
   Future<int> deleteTask(int id) async {
     final db = await database;
