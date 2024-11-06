@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../database/database_helper.dart';
 import '../models/task_model.dart';
-import '../repeation/task_constants.dart'; // Import the task constants
+import '../repeation/task_constants.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
+
+// Import the task constants
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -29,9 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _showAddTaskDialog() async {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
-    DateTime? dueDate;
-    TimeOfDay? dueTime;
-    bool isRepeating = false; // Add repeat toggle
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    bool isRepeating = false;
     String? repeatInterval;
 
     return showDialog(
@@ -44,122 +48,87 @@ class _HomeScreenState extends State<HomeScreen> {
               content: SingleChildScrollView(
                 child: Column(
                   children: [
-                    TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(labelText: 'Task Title'),
-                    ),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: InputDecoration(labelText: 'Task Description'),
-                    ),
-                    SizedBox(height: 10),
+                    TextField(controller: titleController, decoration: InputDecoration(labelText: 'Task Title')),
+                    TextField(controller: descriptionController, decoration: InputDecoration(labelText: 'Task Description')),
                     ElevatedButton(
                       onPressed: () async {
-                        final selectedDate = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime(2100),
-                        );
-                        if (selectedDate != null) {
-                          setState(() {
-                            dueDate = selectedDate;
-                          });
-                        }
+                        final date = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime(2100));
+                        setState(() { selectedDate = date; });
                       },
-                      child: Text(dueDate == null
-                          ? 'Select Due Date'
-                          : 'Due Date: ${DateFormat.yMd().format(dueDate!)}'),
+                      child: Text(selectedDate == null ? 'Select Due Date' : 'Due Date: ${DateFormat.yMd().format(selectedDate!)}'),
                     ),
-                    SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: () async {
-                        final selectedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (selectedTime != null) {
-                          setState(() {
-                            dueTime = selectedTime;
-                          });
-                        }
+                        final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                        setState(() { selectedTime = time; });
                       },
-                      child: Text(dueTime == null
-                          ? 'Select Due Time'
-                          : 'Due Time: ${dueTime!.format(context)}'),
+                      child: Text(selectedTime == null ? 'Select Due Time' : 'Due Time: ${selectedTime!.format(context)}'),
                     ),
-                    SizedBox(height: 10),
-
-                    // Repeat Task Toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Repeat Task', style: TextStyle(fontSize: 16)),
-                        Switch(
-                          value: isRepeating,
-                          onChanged: (bool value) {
-                            setState(() {
-                              isRepeating = value;
-                              if (!isRepeating) {
-                                repeatInterval = null; // Clear interval if repeating is disabled
-                              }
-                            });
-                          },
-                        ),
-                      ],
+                    SwitchListTile(
+                      title: Text("Repeat Task"),
+                      value: isRepeating,
+                      onChanged: (val) { setState(() { isRepeating = val; }); },
                     ),
-
-                    // Repeat Interval Dropdown
                     if (isRepeating)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: DropdownButtonFormField<String>(
-                          value: repeatInterval,
-                          items: [
-                            DropdownMenuItem(value: TaskConstants.minutely, child: Text('Every Minute')),
-                            DropdownMenuItem(value: TaskConstants.daily, child: Text('Every Day')),
-                            DropdownMenuItem(value: TaskConstants.weekly, child: Text('Every Week')),
-                            DropdownMenuItem(value: TaskConstants.monthly, child: Text('Every Month')),
-                            DropdownMenuItem(value: TaskConstants.yearly, child: Text('Every Year')),
-                          ],
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              repeatInterval = newValue;
-                            });
-                          },
-                          decoration: InputDecoration(labelText: 'Repeat Interval'),
-                        ),
+                      DropdownButtonFormField<String>(
+                        value: repeatInterval,
+                        items: TaskConstants.intervals.map((interval) => DropdownMenuItem(value: interval, child: Text("Repeat: $interval"))).toList(),
+                        onChanged: (val) { setState(() { repeatInterval = val; }); },
+                        decoration: InputDecoration(labelText: "Repeat Interval"),
                       ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.pop(context),
                   child: Text('Cancel'),
                 ),
                 TextButton(
                   onPressed: () async {
-                    if (titleController.text.isNotEmpty &&
-                        dueDate != null &&
-                        dueTime != null) {
-                      final formattedTime = dueTime!.format(context); // Save time in 24-hour format
+                    if (titleController.text.isNotEmpty && selectedDate != null && selectedTime != null) {
+                      final dueDateTime = DateTime(
+                        selectedDate!.year,
+                        selectedDate!.month,
+                        selectedDate!.day,
+                        selectedTime!.hour,
+                        selectedTime!.minute,
+                      );
+
                       Task newTask = Task(
                         title: titleController.text,
                         description: descriptionController.text,
-                        dueDate: dueDate!,
-                        dueTime: formattedTime, // Ensure dueTime is set here
-                        isCompleted: false,
-                        isRepeating: isRepeating, // Add repeat property
-                        repeatInterval: repeatInterval, // Save the repeat interval
+                        dueDate: dueDateTime,
+                        dueTime: '${selectedTime!.hour}:${selectedTime!.minute}', // Save in 24-hour format
+                        isRepeating: isRepeating,
+                        repeatInterval: repeatInterval,
                       );
-                      await _dbHelper.addTask(newTask);
-                      _loadTasks(); // Refresh task list
-                      Navigator.of(context).pop();
+
+                      final taskId = await _dbHelper.addTask(newTask);
+                      newTask.id = taskId;
+
+                      await _notifyUser(newTask, "Task added: ${newTask.title}");
+
+                      // Schedule a one-time check for overdue status
+                      final overdueDuration = dueDateTime.difference(DateTime.now()).isNegative
+                          ? Duration.zero  // If time has already passed, run immediately
+                          : dueDateTime.difference(DateTime.now());
+
+                      Workmanager().registerOneOffTask(
+                        'overdueCheck_${newTask.id}', // Unique task ID
+                        'checkForOverdueTasks',
+                        initialDelay: overdueDuration, // Schedule for exact time of dueDateTime
+                        inputData: {'taskId': newTask.id},
+                      );
+
+                      _loadTasks();
+                      Navigator.pop(context);
                     }
                   },
                   child: Text('Add'),
                 ),
+
+
               ],
             );
           },
@@ -167,6 +136,8 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -209,3 +180,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+Future<void> _notifyUser(Task task, String message) async {
+  if (task.id == null) return; // Check if the task ID is null before proceeding
+
+  const androidDetails = AndroidNotificationDetails(
+    'task_channel', 'Task Notifications',
+    channelDescription: 'Notifications for task reminders',
+    importance: Importance.max,
+    priority: Priority.high,
+    showWhen: false,
+  );
+  const platformDetails = NotificationDetails(android: androidDetails);
+
+  await flutterLocalNotificationsPlugin.show(
+    task.id!, // Task ID is guaranteed to be non-null here
+    'Task Reminder',
+    message,
+    platformDetails,
+    payload: task.id.toString(),
+  );
+}
+
+

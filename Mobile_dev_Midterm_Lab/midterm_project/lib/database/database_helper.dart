@@ -45,6 +45,16 @@ class DatabaseHelper {
     );
   }
 
+  Future<Task?> getTaskById(int id) async {
+    final db = await database;
+    final result = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
+
+    if (result.isNotEmpty) {
+      return Task.fromMap(result.first);
+    } else {
+      return null;
+    }
+  }
 
 
   // CRUD methods (Add, Update, Delete, Fetch)
