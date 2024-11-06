@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 import '../models/task_model.dart';
 import '../database/database_helper.dart';
 import '../repeation/task_constants.dart'; // Import the task constants
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
+
+
 
 
 class TaskDetailScreen extends StatefulWidget {
@@ -77,12 +81,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       widget.task.isCompleted = !widget.task.isCompleted;
     });
     await _dbHelper.updateTask(widget.task);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(widget.task.isCompleted ? 'Task marked as complete!' : 'Task marked as incomplete!'),
-    ));
 
-    Navigator.pop(context, true); // Return `true` to indicate an update
+    if (widget.task.isCompleted && widget.task.isRepeating) {
+      final Duration resetDuration = _getRepeatDuration(widget.task.repeatInterval!);
+      Workmanager().registerOneOffTask(
+        'resetTask_${widget.task.id}', // Unique task ID
+        'resetTask',
+        initialDelay: resetDuration,
+        inputData: {'taskId': widget.task.id},
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.task.isCompleted ? 'Task marked as complete!' : 'Task marked as incomplete!')));
   }
+
 
   void _editTask() async {
     final TextEditingController titleController = TextEditingController(text: widget.task.title);
@@ -93,18 +105,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     String? repeatInterval = widget.task.repeatInterval;
 
     // Initialize `dueTime` safely
-    if (widget.task.dueTime != null) {
-      try {
-        final timeParts = widget.task.dueTime!.split(':');
-        dueTime = TimeOfDay(
-          hour: int.parse(timeParts[0]),
-          minute: int.parse(timeParts[1]),
-        );
-      } catch (e) {
-        print("Error parsing dueTime: $e");
-        dueTime = TimeOfDay.now(); // Fallback if parsing fails
-      }
-    } else {
+    if (widget.task.dueTime != null && widget.task.dueTime!.contains(':')) {
+      final timeParts = widget.task.dueTime!.split(':');
+      dueTime = TimeOfDay(
+        hour: int.parse(timeParts[0]),  // No "AM" or "PM" here, only hours and minutes
+        minute: int.parse(timeParts[1]),
+      );
+    }
+ else {
       dueTime = TimeOfDay.now(); // Default time if dueTime is not set
     }
 
@@ -244,3 +252,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     Navigator.pop(context, true); // Indicate task deletion
   }
 }
+
+Future<void> _notifyUser(Task task, String message) async {
+  const androidDetails = AndroidNotificationDetails(
+    'task_channel', 'Task Notifications',
+    channelDescription: 'Notifications for task reminders',
+    importance: Importance.max,
+    priority: Priority.high,
+    showWhen: false,
+  );
+  const platformDetails = NotificationDetails(android: androidDetails);
+
+  await flutterLocalNotificationsPlugin.show(
+    task.id!,
+    'Task Reminder',
+    message,
+    platformDetails,
+    payload: task.id.toString(),
+  );
+}
+
