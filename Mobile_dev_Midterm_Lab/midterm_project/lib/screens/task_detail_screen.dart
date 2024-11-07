@@ -3,8 +3,13 @@ import 'package:intl/intl.dart';
 import '../models/task_model.dart';
 import '../database/database_helper.dart';
 import '../repeation/task_constants.dart'; // Import the task constants
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
+import 'home_screen.dart';
+import 'package:midterm_project/main.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+
 
 
 
@@ -82,17 +87,85 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     });
     await _dbHelper.updateTask(widget.task);
 
-    if (widget.task.isCompleted && widget.task.isRepeating) {
-      final Duration resetDuration = _getRepeatDuration(widget.task.repeatInterval!);
-      Workmanager().registerOneOffTask(
-        'resetTask_${widget.task.id}', // Unique task ID
-        'resetTask',
-        initialDelay: resetDuration,
-        inputData: {'taskId': widget.task.id},
+    if (widget.task.isCompleted) {
+      await showNotification(
+        "Task Completed",
+        "Task '${widget.task.title}' has been marked as complete.",
+        widget.task.id!,
       );
+
+      if (widget.task.isRepeating && DateTime.now().isAfter(widget.task.dueDate)) {
+        await handleTaskOverdueReschedule(widget.task);
+      }
+    } else {
+      await scheduleOverdueNotification(widget.task);
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.task.isCompleted ? 'Task marked as complete!' : 'Task marked as incomplete!')));
+    Navigator.pop(context, true); // Indicate task update
+  }
+
+
+  Future<void> scheduleOverdueNotification(Task task) async {
+    final androidDetails = AndroidNotificationDetails(
+      'task_channel',
+      'Task Notifications',
+      channelDescription: 'Notifications for task reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    final notificationDetails = NotificationDetails(android: androidDetails);
+
+    // Schedule notification for the task's due date
+    final notificationTime = tz.TZDateTime.from(task.dueDate, tz.local);
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      task.id!,
+      'Task Overdue',
+      'Your task "${task.title}" is overdue!',
+      notificationTime,
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      payload: task.id.toString(),
+    );
+  }
+
+
+  DateTime getNextDueDate(DateTime dueDate, String? interval) {
+    switch (interval) {
+      case TaskConstants.minutely:
+        return dueDate.add(Duration(minutes: 1));
+      case TaskConstants.daily:
+        return dueDate.add(Duration(days: 1));
+      case TaskConstants.weekly:
+        return dueDate.add(Duration(days: 7));
+      case TaskConstants.monthly:
+        return DateTime(dueDate.year, dueDate.month + 1, dueDate.day);
+      case TaskConstants.yearly:
+        return DateTime(dueDate.year + 1, dueDate.month, dueDate.day);
+      default:
+        return dueDate;
+    }
+  }
+
+
+
+
+  Duration _getRepeatDuration(String repeatInterval) {
+    switch (repeatInterval) {
+      case 'minutely':
+        return Duration(minutes: 1);
+      case 'daily':
+        return Duration(days: 1);
+      case 'weekly':
+        return Duration(days: 7);
+      case 'monthly':
+        return Duration(days: 30); // Approximate for monthly
+      case 'yearly':
+        return Duration(days: 365); // Approximate for yearly
+      default:
+        throw ArgumentError('Invalid repeat interval: $repeatInterval');
+    }
   }
 
 
@@ -253,22 +326,4 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 }
 
-Future<void> _notifyUser(Task task, String message) async {
-  const androidDetails = AndroidNotificationDetails(
-    'task_channel', 'Task Notifications',
-    channelDescription: 'Notifications for task reminders',
-    importance: Importance.max,
-    priority: Priority.high,
-    showWhen: false,
-  );
-  const platformDetails = NotificationDetails(android: androidDetails);
-
-  await flutterLocalNotificationsPlugin.show(
-    task.id!,
-    'Task Reminder',
-    message,
-    platformDetails,
-    payload: task.id.toString(),
-  );
-}
 
