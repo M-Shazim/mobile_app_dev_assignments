@@ -5,6 +5,13 @@ import '../models/task_model.dart';
 import '../repeation/task_constants.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:midterm_project/main.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:midterm_project/screens/theme_provider.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
+
 
 // Import the task constants
 
@@ -13,15 +20,32 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
+
   final DatabaseHelper _dbHelper = DatabaseHelper();
   List<Task> _tasks = [];
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Check overdue tasks whenever the app resumes
+    if (state == AppLifecycleState.resumed) {
+      checkForOverdueTasks();
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _loadTasks();
+
+    // Periodic check every minute
+    Timer.periodic(Duration(minutes: 1), (timer) async {
+      await checkForOverdueTasks();
+    });
   }
+
 
   Future<void> _loadTasks() async {
     final tasks = await _dbHelper.fetchTasks();
@@ -99,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: titleController.text,
                         description: descriptionController.text,
                         dueDate: dueDateTime,
-                        dueTime: '${selectedTime!.hour}:${selectedTime!.minute}', // Save in 24-hour format
+                        dueTime: '${selectedTime!.hour}:${selectedTime!.minute}',
                         isRepeating: isRepeating,
                         repeatInterval: repeatInterval,
                       );
@@ -107,19 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       final taskId = await _dbHelper.addTask(newTask);
                       newTask.id = taskId;
 
-                      await _notifyUser(newTask, "Task added: ${newTask.title}");
+                      // Notify that the task was added
+                      await showNotification("Task Added", "Task '${newTask.title}' was added", taskId);
 
-                      // Schedule a one-time check for overdue status
-                      final overdueDuration = dueDateTime.difference(DateTime.now()).isNegative
-                          ? Duration.zero  // If time has already passed, run immediately
-                          : dueDateTime.difference(DateTime.now());
-
-                      Workmanager().registerOneOffTask(
-                        'overdueCheck_${newTask.id}', // Unique task ID
-                        'checkForOverdueTasks',
-                        initialDelay: overdueDuration, // Schedule for exact time of dueDateTime
-                        inputData: {'taskId': newTask.id},
-                      );
+                      // Schedule a one-time notification for the due time
+                      await scheduleOverdueNotification(newTask);
 
                       _loadTasks();
                       Navigator.pop(context);
@@ -137,12 +153,86 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> scheduleOverdueNotification(Task task) async {
+    final androidDetails = AndroidNotificationDetails(
+      'task_channel',
+      'Task Notifications',
+      channelDescription: 'Notifications for task reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    final notificationDetails = NotificationDetails(android: androidDetails);
+
+    // Schedule notification for the task's due date
+    final notificationTime = tz.TZDateTime.from(task.dueDate, tz.local);
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      task.id!,
+      'Task Overdue',
+      'Your task "${task.title}" is overdue!',
+      notificationTime,
+      notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      payload: task.id.toString(),
+    );
+  }
+
+
+  Future<void> handleTaskOverdueReschedule(Task task) async {
+    bool tasksUpdated = false;
+    if (task.isRepeating) {
+      final DatabaseHelper _dbHelper = DatabaseHelper();
+
+      // Update the task's due date to the next interval
+      task.dueDate = getNextDueDate(DateTime.now(), task.repeatInterval);
+      task.isCompleted = false;  // Reset to incomplete for the new interval
+      await _dbHelper.updateTask(task);
+      tasksUpdated = true;
+
+      // Show "Task Rescheduled" notification
+      await showNotification(
+        "Task Rescheduled",
+        "Task '${task.title}' is rescheduled for ${task.dueDate}.",
+        task.id!,
+      );
+
+      // Schedule the new overdue notification for the updated due date
+      await scheduleOverdueNotification(task);
+    }
+    // Refresh the UI only if tasks were updated
+    if (tasksUpdated) {
+      await _loadTasks();  // Reload tasks to reflect any changes
+    }
+  }
+
+
+
+
+
+
+
+
+  // bool _isDarkTheme = false;
+  ThemeMode _themeMode = ThemeMode.light; // Default to light theme
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
 
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
-      appBar: AppBar(title: Text('Task Manager')),
+      appBar: AppBar(title: Text('Task Managerpp'),actions: [
+        IconButton(
+          icon: Icon(themeProvider.themeMode == ThemeMode.dark ? Icons.brightness_3 : Icons.brightness_7),
+          onPressed: themeProvider.toggleTheme, // Toggle theme on button press
+        ),
+      ],),
       body: ListView.builder(
         itemCount: _tasks.length,
         itemBuilder: (context, index) {
@@ -155,11 +245,35 @@ class _HomeScreenState extends State<HomeScreen> {
             trailing: Checkbox(
               value: task.isCompleted,
               onChanged: (value) async {
-                task.isCompleted = value!;
+                setState(() {
+                  task.isCompleted = value!;
+                });
+
                 await _dbHelper.updateTask(task);
-                _loadTasks(); // Refresh tasks
+
+                if (task.isCompleted) {
+                  // Show "Task Completed" notification
+                  await showNotification(
+                    "Task Completed",
+                    "Task '${task.title}' has been marked as complete.",
+                    task.id!,
+                  );
+
+                  // If task has a repeat interval, reschedule for next interval
+                  if (task.isRepeating) {
+                    await handleTaskOverdueReschedule(task);
+                  }
+                } else {
+                  // If marked incomplete, reset the overdue notification
+                  await scheduleOverdueNotification(task);
+                }
+
+                _loadTasks(); // Refresh task list
               },
             ),
+
+
+
             onTap: () async {
               final result = await Navigator.pushNamed(
                 context,
@@ -181,6 +295,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+DateTime getNextDueDate(DateTime currentDueDate, String? interval) {
+  switch (interval) {
+    case TaskConstants.minutely:
+      return currentDueDate.add(Duration(minutes: 1));
+    case TaskConstants.daily:
+      return currentDueDate.add(Duration(days: 1));
+    case TaskConstants.weekly:
+      return currentDueDate.add(Duration(days: 7));
+    case TaskConstants.monthly:
+      return DateTime(currentDueDate.year, currentDueDate.month + 1, currentDueDate.day);
+    case TaskConstants.yearly:
+      return DateTime(currentDueDate.year + 1, currentDueDate.month, currentDueDate.day);
+    default:
+      return currentDueDate;
+  }
+}
+
+
 Future<void> _notifyUser(Task task, String message) async {
   if (task.id == null) return; // Check if the task ID is null before proceeding
 
@@ -200,6 +332,28 @@ Future<void> _notifyUser(Task task, String message) async {
     platformDetails,
     payload: task.id.toString(),
   );
+}
+
+Future<void> checkForOverdueTasks() async {
+  final dbHelper = DatabaseHelper();
+  final tasks = await dbHelper.fetchTasks();
+  bool tasksUpdated = false;
+
+  for (var task in tasks) {
+    if (!task.isCompleted && DateTime.now().isAfter(task.dueDate)) {
+      // Show "Task Overdue" notification
+      await showNotification(
+        "Task Overdue",
+        "Your task '${task.title}' is overdue!",
+        task.id!,
+      );
+
+      // If the task has a repeat interval, handle rescheduling
+      if (task.isRepeating) {
+        await handleTaskOverdueReschedule(task);
+      }
+    }
+  }
 }
 
 
