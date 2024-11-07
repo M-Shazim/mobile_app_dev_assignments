@@ -10,5 +10,5 @@ class TaskConstants {
   static const Duration checkFrequency = Duration(minutes: 1);
 
   // You can also define a list if you need it for dropdowns or other UI elements
-  static const List<String> intervals = [daily, weekly, monthly, yearly];
+  static const List<String> intervals = [minutely, daily, weekly, monthly, yearly];
 }
