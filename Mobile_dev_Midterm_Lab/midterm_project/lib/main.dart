@@ -14,6 +14,8 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'database/database_helper.dart';
 import 'screens/home_screen.dart';
+import 'screens/task_list_provider.dart';
+
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -29,18 +31,40 @@ void main() async {
   final initSettings = InitializationSettings(android: androidSettings);
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
+  //////////////////////////////////////
+  /////////////////////////////////////
+
   Timer.periodic(Duration(minutes: 1), (timer) async {
     print("timerrrrrrrrrrr");
     await checkForOverdueTasks();
   });
-  // runApp(TaskManagerApp());
+  runApp(TaskManagerApp());
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
       child: TaskManagerApp(),
     ),
   );
+
+  // runApp(
+  //   MultiProvider(
+  //     providers: [
+  //       ChangeNotifierProvider(create: (context) => ThemeProvider()),
+  //       ChangeNotifierProvider(create: (context) => TaskListProvider()),
+  //     ],
+  //     child: TaskManagerApp(),
+  //   ),
+  // );
 }
+
+///////////////////////////
+
+
+
+
+////////////////////////////
+
+
 
 Future<void> showNotification(String title, String body, int id) async {
   const androidDetails = AndroidNotificationDetails(
@@ -107,6 +131,8 @@ Future<void> handleTaskOverdueReschedule(Task task) async {
 
     // Update the task's due date to the next interval
     task.dueDate = getNextDueDate(DateTime.now(), task.repeatInterval);
+    print("new due date: ");
+    print(task.dueTime);
     task.isCompleted = false;  // Reset to incomplete for the new interval
     await _dbHelper.updateTask(task);
     tasksUpdated = true;
@@ -125,8 +151,11 @@ Future<void> handleTaskOverdueReschedule(Task task) async {
   if (tasksUpdated) {
       // Reload tasks to reflect any changes
     print("Tasks are updated");
+
   }
 }
+
+
 
 
 Future<void> checkForOverdueTasks() async {
@@ -151,28 +180,6 @@ Future<void> checkForOverdueTasks() async {
   }
 }
 
-
-
-Future<void> _notifyUser(Task task, String message) async {
-  if (task.id == null) return;
-
-  const androidDetails = AndroidNotificationDetails(
-    'task_channel', 'Task Notifications',
-    channelDescription: 'Notifications for task reminders',
-    importance: Importance.max,
-    priority: Priority.high,
-    showWhen: false,
-  );
-  const platformDetails = NotificationDetails(android: androidDetails);
-
-  await flutterLocalNotificationsPlugin.show(
-    task.id!,
-    'Task Reminder',
-    message,
-    platformDetails,
-    payload: task.id.toString(),
-  );
-}
 
 DateTime getNextDueDate(DateTime dueDate, String? interval) {
   switch (interval) {
@@ -205,15 +212,9 @@ class _TaskManagerAppState extends State<TaskManagerApp> {
     return MaterialApp(
       title: 'Task Manager',
       debugShowCheckedModeBanner: false,
-      // theme: ThemeData(primarySwatch: Colors.blue),
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: themeProvider.themeMode,
-      // Light theme
-
-
-      // darkTheme: ThemeData.dark(), // Dark theme
-      // themeMode: _themeMode, // Current theme mode
       initialRoute: '/',
       onGenerateRoute: (settings) {
         if (settings.name == '/taskDetail') {

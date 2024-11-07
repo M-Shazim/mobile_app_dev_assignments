@@ -49,10 +49,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
 
   Future<void> _loadTasks() async {
     final tasks = await _dbHelper.fetchTasks();
-    setState(() {
-      _tasks = tasks;
-    });
+    print("Fetched tasks: $tasks");
+    if (tasks != null && tasks.isNotEmpty) {
+      setState(() {
+        _tasks = tasks;
+        print(_tasks[0].dueDate);
+      });
+    } else {
+      print("No tasks found or the list is empty.");
+    }
   }
+
 
   Future<void> _showAddTaskDialog() async {
     final TextEditingController titleController = TextEditingController();
@@ -226,8 +233,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       appBar: AppBar(title: Text('Task Managerpp'),actions: [
+        IconButton(
+          icon: Icon(Icons.refresh),
+          onPressed: () {
+            _loadTasks();// Fetch tasks when the refresh button is pressed
+            setState(() {
+              // This can be a dummy setState call to force the UI to rebuild
+            });
+            print("moeww");
+          },
+        ),
         IconButton(
           icon: Icon(themeProvider.themeMode == ThemeMode.dark ? Icons.brightness_3 : Icons.brightness_7),
           onPressed: themeProvider.toggleTheme, // Toggle theme on button press
@@ -240,18 +258,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
           return ListTile(
             title: Text(task.title),
             subtitle: Text(
-              '${task.description}\nDue: ${DateFormat.yMd().format(task.dueDate)} at ${task.dueTime}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}',
+                //'${task.description}\nDue: ${DateFormat('yMd H:mm').format(task.dueDate)}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}'
+                '${task.description}\nDue: ${DateFormat('yMd h:mm a', 'en_US').format(task.dueDate)}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}'
+
+              //'${task.description}\nDue: ${DateFormat.yMd().format(task.dueDate)} at ${task.dueTime}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}',
             ),
             trailing: Checkbox(
               value: task.isCompleted,
               onChanged: (value) async {
                 setState(() {
                   task.isCompleted = value!;
+
                 });
 
                 await _dbHelper.updateTask(task);
 
                 if (task.isCompleted) {
+                  await _loadTasks();
+
                   // Show "Task Completed" notification
                   await showNotification(
                     "Task Completed",
@@ -261,6 +285,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
 
                   // If task has a repeat interval, reschedule for next interval
                   if (task.isRepeating) {
+                    await _loadTasks();
                     await handleTaskOverdueReschedule(task);
                   }
                 } else {
@@ -355,5 +380,11 @@ Future<void> checkForOverdueTasks() async {
     }
   }
 }
+
+
+
+
+
+
 
 
