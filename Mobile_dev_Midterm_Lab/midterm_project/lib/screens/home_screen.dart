@@ -11,6 +11,9 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:midterm_project/screens/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io'; // Import for File
+import 'package:permission_handler/permission_handler.dart';
 
 
 // Import the task constants
@@ -213,6 +216,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
     }
   }
 
+  Future<void> checkAndRequestPermission() async {
+    // Request storage permission
+    PermissionStatus status = await Permission.storage.request();
+
+    if (status.isGranted) {
+      print("Permission granted");
+    } else if (status.isDenied) {
+      print("Permission denied");
+      // You may want to show a dialog asking the user to enable permission manually
+    } else if (status.isPermanentlyDenied) {
+      print("Permission permanently denied. Please enable it in settings.");
+      openAppSettings();  // Opens app settings for the user to manually grant permissions
+    }
+  }
+
+
+  Future<void> exportTaskData(BuildContext context) async {
+    print("export runs");
+    checkAndRequestPermission();
+    try {
+      final directory = await getExternalStorageDirectory();
+      final tasks = await _dbHelper.fetchTasks();
+      if (directory == null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to get external storage directory')));
+        return;
+      }
+
+      final filePath = '${directory.path}/tasks_export.txt';
+
+      // Your logic to write data to the file
+      final file = File(filePath);
+      final StringBuffer buffer = StringBuffer();
+
+      buffer.writeln('Task Title, Description, Due Date, Repeat Interval, Completed');
+      for (final task in tasks) {
+        buffer.writeln('${task.title}, ${task.description}, ${task.dueDate}');
+      }
+
+      await file.writeAsString(buffer.toString());
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tasks exported to $filePath')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error exporting tasks: $e')));
+      print(e);
+    }
+  }
+
+
 
 
 
@@ -236,6 +287,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
 
     return Scaffold(
       appBar: AppBar(title: Text('Task Managerpp'),actions: [
+        IconButton(
+          icon: Icon(Icons.save_alt),
+          onPressed: () {
+            exportTaskData(context); // Fetch tasks when the refresh button is pressed
+            setState(() {
+              // This can be a dummy setState call to force the UI to rebuild
+            });
+            print("moeww");
+          },
+        ),
         IconButton(
           icon: Icon(Icons.refresh),
           onPressed: () {

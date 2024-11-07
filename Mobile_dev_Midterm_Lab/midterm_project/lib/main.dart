@@ -38,7 +38,7 @@ void main() async {
     print("timerrrrrrrrrrr");
     await checkForOverdueTasks();
   });
-  runApp(TaskManagerApp());
+  // runApp(TaskManagerApp());
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
