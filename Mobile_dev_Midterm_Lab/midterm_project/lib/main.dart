@@ -3,19 +3,61 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'screens/home_screen.dart';
 import 'screens/task_detail_screen.dart';
 import 'models/task_model.dart';
-import 'package:workmanager/workmanager.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'database/database_helper.dart';
 import '../repeation/task_constants.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'screens/theme_provider.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';
+import 'database/database_helper.dart';
+import 'screens/home_screen.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await _requestPermissions(); // Request notification permissions
-  Workmanager().initialize(callbackDispatcher);
-  runApp(TaskManagerApp());
+
+
+  // Initialize the timezone package
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('Asia/Karachi')); // Set the timezone
+
+  final androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  final initSettings = InitializationSettings(android: androidSettings);
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+  Timer.periodic(Duration(minutes: 1), (timer) async {
+    print("timerrrrrrrrrrr");
+    await checkForOverdueTasks();
+  });
+  // runApp(TaskManagerApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: TaskManagerApp(),
+    ),
+  );
+}
+
+Future<void> showNotification(String title, String body, int id) async {
+  const androidDetails = AndroidNotificationDetails(
+    'task_channel',
+    'Task Notifications',
+    channelDescription: 'Notifications for task reminders',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
+  const notificationDetails = NotificationDetails(android: androidDetails);
+
+  await flutterLocalNotificationsPlugin.show(
+    id,
+    title,
+    body,
+    notificationDetails,
+  );
 }
 
 Future<void> _requestPermissions() async {
@@ -31,75 +73,88 @@ Future<void> _requestPermissions() async {
   }
 }
 
+Future<void> scheduleOverdueNotification(Task task) async {
+  final androidDetails = AndroidNotificationDetails(
+    'task_channel',
+    'Task Notifications',
+    channelDescription: 'Notifications for task reminders',
+    importance: Importance.max,
+    priority: Priority.high,
+  );
+
+  final notificationDetails = NotificationDetails(android: androidDetails);
+
+  // Schedule notification for the task's due date
+  final notificationTime = tz.TZDateTime.from(task.dueDate, tz.local);
+  await flutterLocalNotificationsPlugin.zonedSchedule(
+    task.id!,
+    'Task Overdue',
+    'Your task "${task.title}" is overdue!',
+    notificationTime,
+    notificationDetails,
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    payload: task.id.toString(),
+  );
+}
+
+
+
+Future<void> handleTaskOverdueReschedule(Task task) async {
+  bool tasksUpdated = false;
+  if (task.isRepeating) {
+    final DatabaseHelper _dbHelper = DatabaseHelper();
+
+    // Update the task's due date to the next interval
+    task.dueDate = getNextDueDate(DateTime.now(), task.repeatInterval);
+    task.isCompleted = false;  // Reset to incomplete for the new interval
+    await _dbHelper.updateTask(task);
+    tasksUpdated = true;
+
+    // Show "Task Rescheduled" notification
+    await showNotification(
+      "Task Rescheduled",
+      "Task '${task.title}' is rescheduled for ${task.dueDate}.",
+      task.id!,
+    );
+
+    // Schedule the new overdue notification for the updated due date
+    await scheduleOverdueNotification(task);
+  }
+  // Refresh the UI only if tasks were updated
+  if (tasksUpdated) {
+      // Reload tasks to reflect any changes
+    print("Tasks are updated");
+  }
+}
+
+
 Future<void> checkForOverdueTasks() async {
   final dbHelper = DatabaseHelper();
   final tasks = await dbHelper.fetchTasks();
 
   for (var task in tasks) {
-    if (!task.isCompleted && task.dueDate.isBefore(DateTime.now())) {
-      await _notifyUser(task, "Your task \"${task.title}\" is overdue!");
+    if (!task.isCompleted && DateTime.now().isAfter(task.dueDate)) {
+      // Show "Task Overdue" notification
+      await showNotification(
+        "Task Overdue",
+        "Your task '${task.title}' is overdue!",
+        task.id!,
+      );
 
+      // If the task has a repeat interval, handle rescheduling
       if (task.isRepeating) {
-        task.dueDate = getNextDueDate(task.dueDate, task.repeatInterval);
-        task.isCompleted = false;
-        await dbHelper.updateTask(task);
 
-        // Schedule the next check based on repeat interval
-        final nextCheckDuration = task.dueDate.difference(DateTime.now());
-        Workmanager().registerOneOffTask(
-          'overdueCheck_${task.id}',
-          'checkForOverdueTasks',
-          initialDelay: nextCheckDuration,
-          inputData: {'taskId': task.id},
-        );
+        await handleTaskOverdueReschedule(task);
       }
     }
   }
 }
 
-Future<void> checkTaskOverdue(int taskId) async {
-  final dbHelper = DatabaseHelper();
-  final task = await dbHelper.getTaskById(taskId); // Implement `getTaskById` in your `DatabaseHelper`
-
-  if (task != null && !task.isCompleted && task.dueDate.isBefore(DateTime.now())) {
-    await _notifyUser(task, "Your task \"${task.title}\" is overdue!");
-
-    if (task.isRepeating) {
-      task.dueDate = getNextDueDate(task.dueDate, task.repeatInterval);
-      task.isCompleted = false;
-      await dbHelper.updateTask(task);
-
-      // Schedule next check based on repeat interval
-      final nextCheckDuration = task.dueDate.difference(DateTime.now());
-      Workmanager().registerOneOffTask(
-        'overdueCheck_${task.id}',
-        'checkForOverdueTasks',
-        initialDelay: nextCheckDuration,
-        inputData: {'taskId': task.id},
-      );
-    }
-  }
-}
-
-
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    final taskId = inputData?['taskId'] as int?;
-    if (taskId != null) {
-      await checkTaskOverdue(taskId);
-    } else {
-      await checkForOverdueTasks(); // Check all tasks on startup
-    }
-    return Future.value(true);
-  });
-}
-
-
-
 
 
 Future<void> _notifyUser(Task task, String message) async {
-  if (task.id == null) return; // Check if the task ID is null before proceeding
+  if (task.id == null) return;
 
   const androidDetails = AndroidNotificationDetails(
     'task_channel', 'Task Notifications',
@@ -111,14 +166,13 @@ Future<void> _notifyUser(Task task, String message) async {
   const platformDetails = NotificationDetails(android: androidDetails);
 
   await flutterLocalNotificationsPlugin.show(
-    task.id!, // Task ID is guaranteed to be non-null here
+    task.id!,
     'Task Reminder',
     message,
     platformDetails,
     payload: task.id.toString(),
   );
 }
-
 
 DateTime getNextDueDate(DateTime dueDate, String? interval) {
   switch (interval) {
@@ -137,21 +191,44 @@ DateTime getNextDueDate(DateTime dueDate, String? interval) {
   }
 }
 
-class TaskManagerApp extends StatelessWidget {
+class TaskManagerApp extends StatefulWidget {
+  @override
+  _TaskManagerAppState createState() => _TaskManagerAppState();
+}
+
+class _TaskManagerAppState extends State<TaskManagerApp> {
+
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       title: 'Task Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
+      // theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: themeProvider.themeMode,
+      // Light theme
+
+
+      // darkTheme: ThemeData.dark(), // Dark theme
+      // themeMode: _themeMode, // Current theme mode
       initialRoute: '/',
       onGenerateRoute: (settings) {
         if (settings.name == '/taskDetail') {
           final task = settings.arguments as Task;
-          return MaterialPageRoute(builder: (context) => TaskDetailScreen(task: task));
+          return MaterialPageRoute(
+            builder: (context) => TaskDetailScreen(task: task),
+          );
         }
-        return MaterialPageRoute(builder: (context) => HomeScreen());
+        return MaterialPageRoute(
+          builder: (context) => HomeScreen(),
+        );
       },
     );
   }
 }
+
+
+
