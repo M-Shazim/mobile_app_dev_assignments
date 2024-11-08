@@ -209,11 +209,46 @@ class _TaskManagerAppState extends State<TaskManagerApp> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+
+
+    // Define custom light theme colors
+    final lightTheme = ThemeData.light().copyWith(
+      primaryColor: Colors.blue,
+      colorScheme: ColorScheme.light(
+        primary: Colors.blue,
+        secondary: Colors.amber, // Secondary color, previously accentColor
+      ),
+      scaffoldBackgroundColor: Colors.white,
+      appBarTheme: AppBarTheme(
+        color: Colors.blue,
+        iconTheme: IconThemeData(color: Colors.white),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: Colors.amber,
+      ),
+    );
+
+    // Define custom dark theme colors
+    final darkTheme = ThemeData.dark().copyWith(
+      primaryColor: Colors.deepPurple,
+      colorScheme: ColorScheme.dark(
+        primary: Colors.deepPurple,
+        secondary: Colors.tealAccent, // Secondary color in dark theme
+      ),
+      scaffoldBackgroundColor: Colors.black,
+      appBarTheme: AppBarTheme(
+        color: Colors.deepPurple,
+        iconTheme: IconThemeData(color: Colors.white),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: Colors.tealAccent,
+      ),
+    );
     return MaterialApp(
       title: 'Task Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+      theme: lightTheme,
+      darkTheme: darkTheme,
       themeMode: themeProvider.themeMode,
       initialRoute: '/',
       onGenerateRoute: (settings) {

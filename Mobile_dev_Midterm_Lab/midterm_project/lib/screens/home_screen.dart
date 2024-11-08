@@ -320,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
             title: Text(task.title),
             subtitle: Text(
                 //'${task.description}\nDue: ${DateFormat('yMd H:mm').format(task.dueDate)}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}'
-                '${task.description}\nDue: ${DateFormat('yMd h:mm a', 'en_US').format(task.dueDate)}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}'
+                '${task.description}\nDue: ${DateFormat('MM/dd/yyyy h:mm a', 'en_US').format(task.dueDate)}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}'
 
               //'${task.description}\nDue: ${DateFormat.yMd().format(task.dueDate)} at ${task.dueTime}${task.isRepeating ? ' (Repeats: ${task.repeatInterval})' : ''}',
             ),
