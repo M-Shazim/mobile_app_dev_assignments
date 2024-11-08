@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io'; // Import for File
 import 'package:permission_handler/permission_handler.dart';
+import 'package:csv/csv.dart';
 
 
 // Import the task constants
@@ -44,8 +45,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
     _loadTasks();
 
     // Periodic check every minute
-    Timer.periodic(Duration(minutes: 1), (timer) async {
+    Timer.periodic(Duration(seconds: 2), (timer) async {
       await checkForOverdueTasks();
+      setState(() {
+        // This can be a dummy setState call to force the UI to rebuild
+      });
     });
   }
 
@@ -232,29 +236,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
   }
 
 
+
   Future<void> exportTaskData(BuildContext context) async {
     print("export runs");
-    checkAndRequestPermission();
+    await checkAndRequestPermission();  // Ensure permission is requested
     try {
       final directory = await getExternalStorageDirectory();
       final tasks = await _dbHelper.fetchTasks();
+
       if (directory == null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to get external storage directory')));
         return;
       }
 
-      final filePath = '${directory.path}/tasks_export.txt';
+      final filePath = '${directory.path}/tasks_export.csv';  // Save as CSV file
 
-      // Your logic to write data to the file
-      final file = File(filePath);
-      final StringBuffer buffer = StringBuffer();
+      // Create a list of lists for CSV format
+      List<List<dynamic>> rows = [];
+      rows.add(['Task Title', 'Description', 'Due Date', 'Repeat Interval', 'Completed']);  // Header row
 
-      buffer.writeln('Task Title, Description, Due Date, Repeat Interval, Completed');
       for (final task in tasks) {
-        buffer.writeln('${task.title}, ${task.description}, ${task.dueDate}');
+        rows.add([
+          task.title,
+          task.description,
+          task.dueDate.toString(),  // Ensure you convert any DateTime fields to string
+          task.repeatInterval.toString(),  // If repeatInterval is an int or enum, convert it to string
+          task.isCompleted ? 'Completed' : 'Pending'
+        ]);
       }
 
-      await file.writeAsString(buffer.toString());
+      // Convert the list to a CSV string
+      String csvData = const ListToCsvConverter().convert(rows);
+
+      // Create and write the CSV data to the file
+      final file = File(filePath);
+      await file.writeAsString(csvData);
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Tasks exported to $filePath')));
     } catch (e) {
@@ -286,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver{
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Task Managerpp'),actions: [
+      appBar: AppBar(title: Text('Task Manager'),actions: [
         IconButton(
           icon: Icon(Icons.save_alt),
           onPressed: () {
