@@ -13,6 +13,11 @@ const klargebuttonstyle=TextStyle(
   fontWeight: FontWeight.bold,
 );
 
+const kTitleStyleS2=TextStyle(
+  fontSize: 50.0,
+  fontWeight: FontWeight.bold,
+);
+
 
 const activeColor = Color(0xFF1D1E33);
 const de_activeColor = Color(0xFF111328);
