@@ -19,6 +19,7 @@ class _InputPageState extends State<InputPage> {
   Gender? selectGender;
   int sliderheight = 180;
   int sliderweight = 60;
+  int sliderage = 20;
 
     @override
     Widget build(BuildContext context){
@@ -121,6 +122,23 @@ class _InputPageState extends State<InputPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              RoundIcon(
+                                iconData: Icons.remove,
+                                onPress: (){
+                                  setState(() {
+                                    sliderweight--;
+                                  });
+                                },
+                              ),
+                              SizedBox(width:10.0),
+                              RoundIcon(
+                                iconData: Icons.add,
+                                onPress: (){
+                                  setState(() {
+                                    sliderweight++;
+                                  });
+                                },
+                              ),
 
                             ],
                           )
@@ -128,11 +146,80 @@ class _InputPageState extends State<InputPage> {
                       ),
 
                     )),
-                    Expanded(child: RepeatContainerCode(colors : Color(0xFF1D1E33)))
+                    Expanded(child: RepeatContainerCode(
+                      colors : Color(0xFF1D1E33),
+                      cardWidget: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "AGE",
+                            style: klabelstyle,
+                          ),
+                          Text(
+                            sliderage.toString(),
+                            style: klabelstyle2,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              RoundIcon(
+                                iconData: Icons.remove,
+                                onPress: (){
+                                  setState(() {
+                                    sliderage--;
+                                  });
+                                },
+                              ),
+                              SizedBox(width:10.0),
+                              RoundIcon(
+                                iconData: Icons.add,
+                                onPress: (){
+                                  setState(() {
+                                    sliderage++;
+                                  });
+                                },
+                              ),
+
+                            ],
+                          )
+                        ],
+                      ),
+
+                    )),
                   ],
                 )),
+                Container(
+                  color: Color(0xFFEB1555),
+                  margin: EdgeInsets.only(top: 10.0),
+                  width: double.infinity,
+                  height: 80.0,
+                )
               ],
             )
           );
     }
+}
+
+
+class RoundIcon extends StatelessWidget{
+  RoundIcon({
+    required this.iconData,
+    required this.onPress,
+});
+  final IconData iconData;
+  final VoidCallback? onPress;
+  @override
+  Widget build(BuildContext context){
+    return RawMaterialButton(
+      child: Icon(iconData),
+      onPressed: onPress,
+      elevation: 6.0,
+      constraints: BoxConstraints.tightFor(
+        height: 56.0,
+        width: 56.0,
+      ),
+      shape: CircleBorder(),
+      fillColor: Color(0xFF4C4F5E),
+    );
+  }
 }
