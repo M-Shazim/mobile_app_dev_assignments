@@ -16,22 +16,8 @@ class InputPage extends StatefulWidget{
 }
 
 class _InputPageState extends State<InputPage> {
-  Color maleColor = de_activeColor;
-  Color femaleColor = de_activeColor;
-  void updateColor(Gender gendertype)
-  {
-    if(gendertype==Gender.male)
-    {
-      maleColor = activeColor;
-      femaleColor = de_activeColor;
-    }
-    if(gendertype==Gender.female)
-    {
-      maleColor = de_activeColor;
-      femaleColor = activeColor;
-    }
+  Gender? selectGender;
 
-  }
     @override
     Widget build(BuildContext context){
           return Scaffold(
@@ -47,26 +33,27 @@ class _InputPageState extends State<InputPage> {
                             child: GestureDetector(
                               onTap: (){
                                 setState(() {
-                                  updateColor(Gender.male);
+                                  selectGender=Gender.male;
                                 });
                               },
                               child: RepeatContainerCode(
-                                colors : maleColor,
+                                colors : selectGender==Gender.male?activeColor:de_activeColor,
                               cardWidget: card_widget(
                                 iconData: Icons.male,
                                 label: "MALE",
                               ),
-                                                        ),
+                              ),
                             ),),
                           Expanded(
                             child: GestureDetector(
                               onTap: (){
                                 setState(() {
-                                  updateColor(Gender.female);
+                                  selectGender=Gender.female;
+
                                 });
                               },
                               child: RepeatContainerCode(
-                              colors : femaleColor,
+                              colors : selectGender==Gender.female?activeColor:de_activeColor,
                               cardWidget: card_widget(
                                 iconData: Icons.female,
                                 label: "FEMALE",
