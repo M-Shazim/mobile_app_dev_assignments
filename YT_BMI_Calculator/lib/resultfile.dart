@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:yt_bmi_calculator/container_file.dart';
 import 'constantFile.dart';
 import 'input_page.dart';
+import 'calculatorFile.dart';
 
 class ResultScreen extends StatelessWidget {
+
+  ResultScreen({required this.bmiResult,required this.resultText, required this.interpretation});
+
+  final String bmiResult;
+  final String resultText;
+  final String interpretation;
 
   @override
   Widget build(BuildContext context) {
@@ -34,17 +41,17 @@ class ResultScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    "Normal",
+                    resultText.toUpperCase(),
                     style: klabelstyle,
                   ),
                   Text(
-                    "20.6",
+                    bmiResult,
                     style: kTitleStyleS2,
 
                   ),
                   Text(
-                    "BMI is low",
-                    style: klabelstyle2,
+                    interpretation,
+                    style: klabelstyle,
 
                   ),
                 ],

@@ -4,6 +4,7 @@ import 'package:yt_bmi_calculator/Icon_text_file.dart';
 import 'package:yt_bmi_calculator/constantFile.dart';
 import 'package:yt_bmi_calculator/resultfile.dart';
 import 'container_file.dart';
+import 'calculatorFile.dart';
 
 
 enum Gender{
@@ -191,7 +192,13 @@ class _InputPageState extends State<InputPage> {
                 )),
                 GestureDetector(
                   onTap: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (context)=>ResultScreen()));
+                    CalculatorBrain calc = CalculatorBrain(height: sliderheight, weight: sliderweight);
+                    Navigator.push(context, MaterialPageRoute(builder: (context)=>ResultScreen(
+                      bmiResult: calc.calculateBMI(),
+                      resultText: calc.getResult(),
+                      interpretation: calc.getInterpretation(),
+
+                    )));
                   },
                   child: Container(
                     child: Center(
