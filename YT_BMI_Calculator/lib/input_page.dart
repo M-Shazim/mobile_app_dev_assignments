@@ -17,6 +17,7 @@ class InputPage extends StatefulWidget{
 
 class _InputPageState extends State<InputPage> {
   Gender? selectGender;
+  int sliderheight = 180;
 
     @override
     Widget build(BuildContext context){
@@ -65,8 +66,38 @@ class _InputPageState extends State<InputPage> {
                     child: RepeatContainerCode(
                       colors : Color(0xFF1D1E33),
                       cardWidget: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Height", style: klabelstyle,)
+                          Text(
+                            "Height",
+                            style: klabelstyle,),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                sliderheight.toString(),
+                                style: klabelstyle2
+                              ),
+                              Text(
+                                "cm",
+                                style: klabelstyle,
+                              ),
+
+                            ],
+                          ),
+                          Slider(
+                            value: sliderheight.toDouble(),
+                            min : 120.0,
+                            max : 220.0,
+                            activeColor: Color(0xFFEB1555),
+                            inactiveColor: Color(0xFF8D8E98),
+                            onChanged: (double newValue){
+                              setState(() {
+                                sliderheight = newValue.round();
+                              });
+                            },
+                          ),
+
                         ],
                       ),
                     )),
