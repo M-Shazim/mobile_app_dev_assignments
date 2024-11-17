@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:yt_bmi_calculator/Icon_text_file.dart';
 import 'package:yt_bmi_calculator/constantFile.dart';
+import 'package:yt_bmi_calculator/resultfile.dart';
 import 'container_file.dart';
 
 
@@ -188,11 +189,22 @@ class _InputPageState extends State<InputPage> {
                     )),
                   ],
                 )),
-                Container(
-                  color: Color(0xFFEB1555),
-                  margin: EdgeInsets.only(top: 10.0),
-                  width: double.infinity,
-                  height: 80.0,
+                GestureDetector(
+                  onTap: (){
+                    Navigator.push(context, MaterialPageRoute(builder: (context)=>ResultScreen()));
+                  },
+                  child: Container(
+                    child: Center(
+                        child: Text(
+                          "Calculate",
+                          style: klargebuttonstyle,
+                        )
+                    ),
+                    color: Color(0xFFEB1555),
+                    margin: EdgeInsets.only(top: 10.0),
+                    width: double.infinity,
+                    height: 80.0,
+                  ),
                 )
               ],
             )
