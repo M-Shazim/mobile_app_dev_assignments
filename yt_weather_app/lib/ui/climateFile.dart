@@ -49,8 +49,8 @@ class _ClimateState extends State<Climate> {
 
 TextStyle cityStyle(){
   return TextStyle(
-    color: Colors.white,
+    color: Colors.black,
     fontSize: 22.9,
     fontStyle: FontStyle.italic,
-  )
+  );
 }
