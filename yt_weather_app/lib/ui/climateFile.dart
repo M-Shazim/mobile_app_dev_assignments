@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/apiFile.dart';
+import '../utils/apiFile.dart' as util;
 
 
 class Climate extends StatefulWidget {
@@ -57,6 +57,10 @@ class _ClimateState extends State<Climate> {
         ],
       ),
     );
+  }
+
+  Future <Map> getWeather(String appId, String city) async{
+    String apiUrl = "https://api.openweathermap.org/data/2.5/weather?lat=30.045246&lon=72.348869&appid=${util.appId}";
   }
 }
 
