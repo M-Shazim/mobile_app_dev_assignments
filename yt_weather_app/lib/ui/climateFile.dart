@@ -26,7 +26,7 @@ class _ClimateState extends State<Climate> {
         children: [
           Center(
             child: Image(
-              image: AssetImage("Images/freezy.jpg"),
+              image: AssetImage("images/moderate.jpg"),
               height: 1200.0,
               width: 600.0,
               fit: BoxFit.fill,
@@ -39,7 +39,20 @@ class _ClimateState extends State<Climate> {
               "Vehari",
               style: cityStyle(),
             ),
-          )
+          ),
+          Center(
+            child: Image(
+              image: AssetImage("images/raining.png"),
+              height: 200,
+            ),
+          ),
+          Container(
+            margin: EdgeInsets.fromLTRB(100.0, 420.0, 0.0, 0.0),
+            child: Text(
+              "50.32F",
+              style: tempStyle(),
+            ),
+          ),
         ],
       ),
     );
@@ -49,8 +62,18 @@ class _ClimateState extends State<Climate> {
 
 TextStyle cityStyle(){
   return TextStyle(
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 22.9,
     fontStyle: FontStyle.italic,
   );
 }
+
+TextStyle tempStyle(){
+  return TextStyle(
+    color: Colors.white,
+    fontSize: 49.9,
+    fontStyle: FontStyle.normal,
+    fontWeight: FontWeight.w500,
+  );
+}
+
